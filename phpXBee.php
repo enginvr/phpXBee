@@ -1098,7 +1098,7 @@ class XBeeFrame extends _XBeeFrameBase {
 					$this -> getApiId() . 
 					$this -> getFrameId() . 
 					$this -> getAddress64() .
-					$this ->getAddress16() . 
+					$this -> getAddress16() . 
 					$this -> getOptions() .
 					$this -> getCmd() .
 					$this -> getValue()
@@ -1116,6 +1116,7 @@ class XBeeFrame extends _XBeeFrameBase {
 	public function localAtCommand($cmd, $val = '') {
 		$this -> setApiId(_XBeeFrameBase::LOCAL_API_ID);
 		$this -> setCmd($this ->_strhex($cmd));
+		$this -> setValue($val);
 		$this -> setCmdData(
 						$this -> getApiId() . 
 						$this -> getFrameId() .
@@ -1157,7 +1158,7 @@ class XBeeFrame extends _XBeeFrameBase {
  * @package XBeeResponse
  */
 class XBeeResponse extends _XBeeFrameBase {
-	const REMOTE_RESPONSE_ID = '97', LOCAL_RESPONSE_ID = '88';
+	const REMOTE_RESPONSE_ID = '97', LOCAL_RESPONSE_ID = '88', DIO_Rx16_INDICATOR_ID = '83';
 	protected $address16, $address64, $status, $cmd, $nodeId, $signalStrength;
 	protected $status_bytes = array();
 	
@@ -1176,6 +1177,8 @@ class XBeeResponse extends _XBeeFrameBase {
 			$this -> _parseRemoteAt();
 		} else if ($this -> getApiId() === XBeeResponse::LOCAL_RESPONSE_ID) {
 			$this -> _parseLocalAt();
+		} else if ($this -> getApiId() === XBeeResponse::DIO_Rx16_INDICATOR_ID) {
+			$this -> _parseDIORx16At();
 		} else {
 			trigger_error('Could not determine response type or response type is not implemented.', E_USER_WARNING);
 		}
@@ -1233,7 +1236,7 @@ class XBeeResponse extends _XBeeFrameBase {
 		$cmd = $this->_hexstr($cmd);
 		
 		$frameId = substr($cmdData, 2, 2);
-		$status = substr($cmdData, 4, 2);
+		$status = substr($cmdData, 28, 2);
 		$address64 = substr($cmdData, 4, 16);
 		$address16 = substr($cmdData, 20, 4);
 		$signalStrength = substr($cmdData, 30, 2);
@@ -1256,7 +1259,7 @@ class XBeeResponse extends _XBeeFrameBase {
 		//<api_id1> <frameId1> <command2> <status2> <add16> <add64> <DB> <NI> <NULL>
 		$cmdData = $this->getCmdData();
 		
-		$cmd = substr($cmdData, 4, 6);
+		$cmd = substr($cmdData, 4, 4);
 		$cmd = $this->_hexstr($cmd);
 		$frameId = substr($cmdData, 2, 2);
 		$status = substr($cmdData, 8, 2);
@@ -1272,6 +1275,25 @@ class XBeeResponse extends _XBeeFrameBase {
 		$this->_setCmd($cmd);
 		$this->_setStatus($status);
 		$this->setFrameId($frameId);
+	}
+
+	/**
+	 * Parses a DIO Rx16 Indicator response
+	 * 
+	 * @return void
+	 */
+	private function _parseDIORx16At() {
+		$cmdData = $this->getCmdData();
+		
+		$cmd = substr($cmdData, 22, 4);
+		$cmd = $this->_hexstr($cmd);
+		$address16 = substr($cmdData, 2, 4);
+		$val = substr($cmdData, 16, 4);
+		$val = base_convert($val, 16, 2);
+
+		$this->setAddress16($address16);
+		$this->setValue($val);
+		$this->_setCmd($cmd);
 	}
 	
 	/**
