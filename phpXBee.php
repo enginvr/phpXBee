@@ -1066,6 +1066,24 @@ abstract class _XBeeFrameBase {
 	public function getValue() {
 		return $this -> val;
 	}
+
+	/**
+	* Sets the status bytes
+	 * 
+	 * @param Array $status_bytes
+	 */
+	public function setStatusBytes($status_bytes) {
+		$this -> status_bytes = $status_bytes;
+	}
+
+	/**
+	* Gets status bytes
+	 * 
+	 * @return Array $status_bytes
+	 */
+	public function getStatusBytes() {
+		return $this -> status_bytes;
+	}
 }
 
 /**
@@ -1179,9 +1197,9 @@ class XBeeResponse extends _XBeeFrameBase {
 			$this -> _parseLocalAt();
 		} else if ($this -> getApiId() === XBeeResponse::DIO_Rx16_INDICATOR_ID) {
 			$this -> _parseDIORx16At();
-		} else {
-			trigger_error('Could not determine response type or response type is not implemented.', E_USER_WARNING);
-		}
+		//} else {
+		//	trigger_error('Could not determine response type or response type is not implemented.', E_USER_WARNING);
+		//}
 		/* debug 
 		echo '</br>';echo 'Response:';print_r($response);echo '</br>';
 		echo ' apiId:';print_r($this->getApiId());echo '</br>';echo ' frameId:';print_r($this->getFrameId());echo '</br>';
@@ -1216,9 +1234,9 @@ class XBeeResponse extends _XBeeFrameBase {
 			$this -> setCmdData($cmdData);
 			$this -> setFrameId($frameId);
 			$this -> setFrame($response);
-		} else {
-			trigger_error('Checksum or length check failed.', E_USER_WARNING);
-		}
+		//} else {
+		//	trigger_error('Checksum or length check failed.', E_USER_WARNING);
+		//}
 	}
 	
 	/**
@@ -1287,12 +1305,19 @@ class XBeeResponse extends _XBeeFrameBase {
 		
 		$cmd = substr($cmdData, 22, 4);
 		$cmd = $this->_hexstr($cmd);
-		$address16 = substr($cmdData, 2, 4);
-		$val = substr($cmdData, 16, 4);
-		$val = base_convert($val, 16, 2);
+		$address16 = substr($cmdData, 2, 4);		
+		$diodata = substr($cmdData, 16, 4);
+		$diodata = base_convert($diodata, 16, 2);
+
+		if (strlen($diodata)!=8) { // 8 is number DIO
+			$diodata = str_repeat("0",(8-strlen($diodata))) . $diodata;
+		}
+		$status_bytes = array_combine(
+			array('D7', 'D6', 'D5', 'D4', 'D3', 'D2', 'D1', 'D0'), 
+			str_split($diodata));
 
 		$this->setAddress16($address16);
-		$this->setValue($val);
+		$this->setStatusBytes($status_bytes);
 		$this->_setCmd($cmd);
 	}
 	
